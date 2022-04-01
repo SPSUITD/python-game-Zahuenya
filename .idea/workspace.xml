@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="55c40512-a640-4d08-976f-7fc7481c7197" name="Default Changelist" comment="создание пустого окна игры">
+    <list default="true" id="55c40512-a640-4d08-976f-7fc7481c7197" name="Default Changelist" comment="добавила view игры">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/game.py" afterDir="false" />
     </list>
@@ -115,7 +115,14 @@
       <option name="project" value="LOCAL" />
       <updated>1653251494037</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="добавила view игры">
+      <created>1653251891288</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1653251891288</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -138,6 +145,7 @@
     <MESSAGE value="15" />
     <MESSAGE value="16" />
     <MESSAGE value="создание пустого окна игры" />
-    <option name="LAST_COMMIT_MESSAGE" value="создание пустого окна игры" />
+    <MESSAGE value="добавила view игры" />
+    <option name="LAST_COMMIT_MESSAGE" value="добавила view игры" />
   </component>
 </project>
