@@ -1,6 +1,10 @@
 import arcade
 import os
 
+GAME_NAME = "Suzy"
+GAME_WINDOW_HEIGHT = 800
+GAME_WINDOW_WIDTH = 1024
+
 
 class GameView(arcade.View):
     """
@@ -26,19 +30,17 @@ class GameView(arcade.View):
         self.tile_map = arcade.load_tilemap(map_name, 0.5)
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
 
-
     def on_show_view(self):
         self.setup()
 
-
     def on_draw(self):
-        """Render game frame"""
+        """Нарисовать кадр"""
         self.clear()
         self.scene.draw()
 
 
 def main():
-    window = arcade.Window(1024, 800, "Suzy")
+    window = arcade.Window(GAME_WINDOW_WIDTH, GAME_WINDOW_HEIGHT, GAME_NAME)
     game_view = GameView()
     window.show_view(game_view)
     arcade.run()
