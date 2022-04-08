@@ -21,11 +21,12 @@ class GameView(arcade.View):
 
         self.tile_map = None
         self.scene = None
+        self.level = 1
 
     def setup(self):
-        """Init game world"""
+        """Инициализировать уровень игры"""
 
-        map_name = f"{self.root_dir}/map.tmx"
+        map_name = f"{self.root_dir}/level_{self.level}.map.tmx"
 
         self.tile_map = arcade.load_tilemap(map_name, 0.5)
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
