@@ -31,6 +31,10 @@ class GameView(arcade.View):
         self.tile_map = arcade.load_tilemap(map_name, 0.5)
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
 
+    def on_key_release(self, key, modifiers):
+        # проверка
+        self.game_over()
+
     def on_show_view(self):
         self.setup()
 
@@ -38,6 +42,32 @@ class GameView(arcade.View):
         """Нарисовать кадр"""
         self.clear()
         self.scene.draw()
+
+    def game_over(self):
+        game_over_view = GameOverView()
+        self.window.show_view(game_over_view)
+
+
+class GameOverView(arcade.View):
+    """Вью для проигрыша"""
+
+    def on_show_view(self):
+        arcade.set_background_color(arcade.color.RED)
+
+    def on_draw(self):
+        self.clear()
+        arcade.draw_text(
+            "Потрачено",
+            GAME_WINDOW_WIDTH / 2,
+            GAME_WINDOW_HEIGHT / 2,
+            arcade.color.BLACK,
+            40,
+            anchor_x="center",
+        )
+
+    def on_mouse_press(self, _x, _y, _button, _modifiers):
+        game_view = GameView()
+        self.window.show_view(game_view)
 
 
 def main():
