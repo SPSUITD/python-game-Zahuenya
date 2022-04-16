@@ -5,23 +5,21 @@ GAME_NAME = "Suzy"
 GAME_WINDOW_HEIGHT = 800
 GAME_WINDOW_WIDTH = 1024
 
+LEVEL_START = 1
+
 
 class GameView(arcade.View):
-    """
-    Главный класс игры
-    """
+    """Главный класс игры"""
 
     def __init__(self):
-        """
-        Функция инициализатор для объекта игры
-        """
+        """Функция инициализатор для объекта игры"""
         super().__init__()
 
         self.root_dir = os.path.dirname(os.path.abspath(__file__))
 
         self.tile_map = None
         self.scene = None
-        self.level = 1
+        self.level = LEVEL_START
 
     def setup(self):
         """Инициализировать уровень игры"""
@@ -33,7 +31,10 @@ class GameView(arcade.View):
 
     def on_key_release(self, key, modifiers):
         # проверка
-        self.game_over()
+        if key == arcade.key.ENTER:
+            self.win()
+        else:
+            self.game_over()
 
     def on_show_view(self):
         self.setup()
@@ -44,8 +45,10 @@ class GameView(arcade.View):
         self.scene.draw()
 
     def game_over(self):
-        game_over_view = GameOverView()
-        self.window.show_view(game_over_view)
+        self.window.show_view(GameOverView())
+
+    def win(self):
+        self.window.show_view(WinView())
 
 
 class GameOverView(arcade.View):
@@ -58,6 +61,28 @@ class GameOverView(arcade.View):
         self.clear()
         arcade.draw_text(
             "Потрачено",
+            GAME_WINDOW_WIDTH / 2,
+            GAME_WINDOW_HEIGHT / 2,
+            arcade.color.BLACK,
+            40,
+            anchor_x="center",
+        )
+
+    def on_mouse_press(self, _x, _y, _button, _modifiers):
+        game_view = GameView()
+        self.window.show_view(game_view)
+
+
+class WinView(arcade.View):
+    """Вью для выигрыша"""
+
+    def on_show_view(self):
+        arcade.set_background_color(arcade.color.GREEN)
+
+    def on_draw(self):
+        self.clear()
+        arcade.draw_text(
+            "Потрачено с умом!",
             GAME_WINDOW_WIDTH / 2,
             GAME_WINDOW_HEIGHT / 2,
             arcade.color.BLACK,
