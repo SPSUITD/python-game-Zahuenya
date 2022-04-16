@@ -26,6 +26,10 @@ class GameView(arcade.View):
 
         map_name = f"{self.root_dir}/level_{self.level}.map.tmx"
 
+        if not os.path.exists(map_name):
+            self.win()
+            return
+
         self.tile_map = arcade.load_tilemap(map_name, 0.5)
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
 
@@ -33,8 +37,10 @@ class GameView(arcade.View):
         # проверка
         if key == arcade.key.ENTER:
             self.win()
-        else:
+        if key == arcade.key.Q:
             self.game_over()
+        if key == arcade.key.UP:
+            self.next_level()
 
     def on_show_view(self):
         self.setup()
@@ -50,49 +56,59 @@ class GameView(arcade.View):
     def win(self):
         self.window.show_view(WinView())
 
+    def next_level(self):
+        self.level += 1
+        self.setup()
 
-class GameOverView(arcade.View):
+
+class RestartGameView(arcade.View):
+    """Вью для перезапуска игры"""
+
+    def __init__(self, text, bg_color, fg_color):
+        super().__init__()
+        self.text = text
+        self.bg_color = bg_color
+        self.fg_color = fg_color
+
+    def on_show_view(self):
+        arcade.set_background_color(self.bg_color)
+
+    def on_draw(self):
+        self.clear()
+        arcade.draw_text(
+            self.text,
+            GAME_WINDOW_WIDTH / 2,
+            GAME_WINDOW_HEIGHT / 2,
+            self.fg_color,
+            40,
+            anchor_x="center",
+        )
+        arcade.draw_text(
+            "Кликните чтобы начать заново",
+            GAME_WINDOW_WIDTH / 2,
+            GAME_WINDOW_HEIGHT / 4,
+            self.fg_color,
+            10,
+            anchor_x="center",
+        )
+
+    def on_mouse_press(self, _x, _y, _button, _modifiers):
+        game_view = GameView()
+        self.window.show_view(game_view)
+
+
+class GameOverView(RestartGameView):
     """Вью для проигрыша"""
 
-    def on_show_view(self):
-        arcade.set_background_color(arcade.color.RED)
-
-    def on_draw(self):
-        self.clear()
-        arcade.draw_text(
-            "Потрачено",
-            GAME_WINDOW_WIDTH / 2,
-            GAME_WINDOW_HEIGHT / 2,
-            arcade.color.BLACK,
-            40,
-            anchor_x="center",
-        )
-
-    def on_mouse_press(self, _x, _y, _button, _modifiers):
-        game_view = GameView()
-        self.window.show_view(game_view)
+    def __init__(self):
+        super().__init__("Потрачено", arcade.color.RED, arcade.color.BLACK)
 
 
-class WinView(arcade.View):
+class WinView(RestartGameView):
     """Вью для выигрыша"""
 
-    def on_show_view(self):
-        arcade.set_background_color(arcade.color.GREEN)
-
-    def on_draw(self):
-        self.clear()
-        arcade.draw_text(
-            "Потрачено с умом!",
-            GAME_WINDOW_WIDTH / 2,
-            GAME_WINDOW_HEIGHT / 2,
-            arcade.color.BLACK,
-            40,
-            anchor_x="center",
-        )
-
-    def on_mouse_press(self, _x, _y, _button, _modifiers):
-        game_view = GameView()
-        self.window.show_view(game_view)
+    def __init__(self):
+        super().__init__("Потрачено с умом", arcade.color.GREEN, arcade.color.BLACK)
 
 
 def main():
