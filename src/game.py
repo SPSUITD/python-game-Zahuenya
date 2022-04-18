@@ -1,8 +1,12 @@
 import arcade
 import os
 
+# Параметры
+
 GAME_NAME = "Suzy"
 GRAVITY = 1.0
+PLAYER_SPEED = 5.0
+PLAYER_JUMP_SPEED = 10.0
 
 GAME_WINDOW_HEIGHT = 800
 GAME_WINDOW_WIDTH = 1024
@@ -45,7 +49,6 @@ class GameView(arcade.View):
         self.player = None
         self.physics_engine = None
 
-
     def setup(self):
         """Инициализировать уровень игры"""
 
@@ -57,6 +60,8 @@ class GameView(arcade.View):
 
         self.tile_map = arcade.load_tilemap(map_name, TILE_SCALING)
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
+
+        self.next_level_x_position = self.tile_map.width * self.tile_map.tile_width
 
         if self.tile_map.background_color:
             arcade.set_background_color(self.tile_map.background_color)
@@ -73,14 +78,25 @@ class GameView(arcade.View):
             walls=self.scene[LAYER_NAME_WALLS]
         )
 
-    def on_key_release(self, key, modifiers):
+    def on_key_press(self, key: int, modifiers: int):
+        if key == arcade.key.LEFT:
+            self.player.change_x = -PLAYER_SPEED
+        elif key == arcade.key.RIGHT:
+            self.player.change_x = PLAYER_SPEED
+        elif key == arcade.key.UP:
+            self.player.change_y = PLAYER_JUMP_SPEED
+        elif key == arcade.key.DOWN:
+            self.player.change_y = -PLAYER_JUMP_SPEED
+
+    def on_key_release(self, key: int, modifiers: int):
         # проверка
-        if key == arcade.key.ENTER:
-            self.win()
         if key == arcade.key.Q:
             self.game_over()
-        if key == arcade.key.UP:
-            self.next_level()
+
+        if key == arcade.key.LEFT or key == arcade.key.RIGHT:
+            self.player.change_x = 0
+        elif key == arcade.key.UP or key == arcade.key.DOWN:
+            self.player.change_y = 0
 
     def on_show_view(self):
         self.setup()
@@ -91,15 +107,22 @@ class GameView(arcade.View):
         self.scene.draw()
 
     def on_update(self, delta_time: float):
+        """Обновить измерения координат и пр."""
         self.physics_engine.update()
 
+        if self.player.center_x >= self.next_level_x_position:
+            self.next_level()
+
     def game_over(self):
+        """Проигрышь"""
         self.window.show_view(GameOverView())
 
     def win(self):
+        """Игра пройдена"""
         self.window.show_view(WinView())
 
     def next_level(self):
+        """Начать новый уровень"""
         self.level += 1
         self.setup()
 
