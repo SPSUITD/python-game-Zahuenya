@@ -2,10 +2,34 @@ import arcade
 import os
 
 GAME_NAME = "Suzy"
+GRAVITY = 1.0
+
 GAME_WINDOW_HEIGHT = 800
 GAME_WINDOW_WIDTH = 1024
 
 LEVEL_START = 1
+TILE_SCALING = 0.5
+
+
+RESOURCES_DIR = os.path.dirname(os.path.abspath(__file__))
+
+LAYER_NAME_PLAYER = "player"
+LAYER_NAME_WALLS = "walls"
+
+
+def get_resource_file_name(file_name):
+    return f"{RESOURCES_DIR}/{file_name}"
+
+
+class Player(arcade.Sprite):
+    def __init__(self, base_name):
+        super().__init__()
+        self.base_name = base_name
+        self.texture = self.load_texture()
+
+    def load_texture(self):
+        file_name = get_resource_file_name(f"{self.base_name}.png")
+        return arcade.load_texture(file_name)
 
 
 class GameView(arcade.View):
@@ -14,24 +38,40 @@ class GameView(arcade.View):
     def __init__(self):
         """Функция инициализатор для объекта игры"""
         super().__init__()
-
-        self.root_dir = os.path.dirname(os.path.abspath(__file__))
-
         self.tile_map = None
         self.scene = None
         self.level = LEVEL_START
 
+        self.player = None
+        self.physics_engine = None
+
+
     def setup(self):
         """Инициализировать уровень игры"""
 
-        map_name = f"{self.root_dir}/level_{self.level}.map.tmx"
+        map_name = get_resource_file_name(f"level_{self.level}.map.tmx")
 
         if not os.path.exists(map_name):
             self.win()
             return
 
-        self.tile_map = arcade.load_tilemap(map_name, 0.5)
+        self.tile_map = arcade.load_tilemap(map_name, TILE_SCALING)
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
+
+        if self.tile_map.background_color:
+            arcade.set_background_color(self.tile_map.background_color)
+
+        self.player = Player("girl")
+        self.player.position = [100, 190]
+        self.scene.add_sprite(LAYER_NAME_PLAYER, self.player)
+
+        self.physics_engine = arcade.PhysicsEnginePlatformer(
+            self.player,
+            #platforms=self.scene[LAYER_NAME_MOVING_PLATFORMS],
+            gravity_constant=GRAVITY,
+            #ladders=self.scene[LAYER_NAME_LADDERS],
+            walls=self.scene[LAYER_NAME_WALLS]
+        )
 
     def on_key_release(self, key, modifiers):
         # проверка
@@ -49,6 +89,9 @@ class GameView(arcade.View):
         """Нарисовать кадр"""
         self.clear()
         self.scene.draw()
+
+    def on_update(self, delta_time: float):
+        self.physics_engine.update()
 
     def game_over(self):
         self.window.show_view(GameOverView())
