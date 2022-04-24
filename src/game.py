@@ -19,21 +19,44 @@ RESOURCES_DIR = os.path.dirname(os.path.abspath(__file__))
 
 LAYER_NAME_PLAYER = "player"
 LAYER_NAME_WALLS = "walls"
+LAYER_NAME_PLATFORMS = "platforms"
+LAYER_NAME_LADDERS = "ladders"
+LAYER_NAME_COINS = "coins"
+LAYER_NAME_BACKGROUND = "background"
+LAYER_NAME_FOREGROUND = "foreground"
 
 
 def get_resource_file_name(file_name):
     return f"{RESOURCES_DIR}/{file_name}"
 
 
+MOVE_SIDE_LEFT = 0
+MOVE_SIDE_RIGHT = 1
+
+
 class Player(arcade.Sprite):
     def __init__(self, base_name):
         super().__init__()
         self.base_name = base_name
-        self.texture = self.load_texture()
+        self.tex_idle = self.load_texture_pair()
+        self.move_side = MOVE_SIDE_LEFT
+        self.texture = self.tex_idle[self.move_side]
 
-    def load_texture(self):
+    def update_animation(self, delta_time: float = 1 / 60):
+        # Figure out if we need to flip face left or right
+        if self.change_x < 0:
+            self.move_side = MOVE_SIDE_LEFT
+        elif self.change_x > 0:
+            self.move_side = MOVE_SIDE_RIGHT
+
+        self.texture = self.tex_idle[self.move_side]
+
+    def load_texture(self, flip_horizontally=False):
         file_name = get_resource_file_name(f"{self.base_name}.png")
-        return arcade.load_texture(file_name)
+        return arcade.load_texture(file_name, flipped_horizontally=flip_horizontally)
+
+    def load_texture_pair(self):
+        return [self.load_texture(), self.load_texture(True)]
 
 
 class GameView(arcade.View):
@@ -66,10 +89,12 @@ class GameView(arcade.View):
         self.tile_map = arcade.load_tilemap(map_name, TILE_SCALING)
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
 
-        self.next_level_x_position = self.tile_map.width * self.tile_map.tile_width
+        self.next_level_x_position = (self.tile_map.width * self.tile_map.tile_width) * TILE_SCALING
 
         if self.tile_map.background_color:
             arcade.set_background_color(self.tile_map.background_color)
+        else:
+            arcade.set_background_color(arcade.color.BLACK)
 
         self.player = Player("girl")
         self.player.position = [100, 190]
@@ -77,9 +102,9 @@ class GameView(arcade.View):
 
         self.physics_engine = arcade.PhysicsEnginePlatformer(
             self.player,
-            #platforms=self.scene[LAYER_NAME_MOVING_PLATFORMS],
+            platforms=self.scene[LAYER_NAME_PLATFORMS],
             gravity_constant=GRAVITY,
-            #ladders=self.scene[LAYER_NAME_LADDERS],
+            ladders=self.scene[LAYER_NAME_LADDERS],
             walls=self.scene[LAYER_NAME_WALLS]
         )
 
@@ -91,13 +116,9 @@ class GameView(arcade.View):
         elif key == arcade.key.UP:
             self.player.change_y = PLAYER_JUMP_SPEED
         elif key == arcade.key.DOWN:
-            self.camera_y_shift = 150
+            self.camera_y_shift = 250
 
     def on_key_release(self, key: int, modifiers: int):
-        # проверка
-        if key == arcade.key.Q:
-            self.game_over()
-
         if key == arcade.key.LEFT or key == arcade.key.RIGHT:
             self.player.change_x = 0
         elif key == arcade.key.UP or key == arcade.key.DOWN:
@@ -125,24 +146,26 @@ class GameView(arcade.View):
 
         if self.player.center_x >= self.next_level_x_position:
             self.next_level()
+            return
 
         self.center_camera_on_sprite(self.camera, self.player, self.camera_y_shift)
+
+        # Update Animations
+        self.scene.update_animation(
+            delta_time,
+            [LAYER_NAME_PLAYER],
+        )
 
         if self.player.center_y < 0:
             self.game_over()
             return
 
-    def reset_camera(self):
-        self.camera.move_to((0, 0))
-
     def game_over(self):
         """Проигрышь"""
-        self.reset_camera()
         self.window.show_view(GameOverView())
 
     def win(self):
         """Игра пройдена"""
-        self.reset_camera()
         self.window.show_view(WinView())
 
     def next_level(self):
