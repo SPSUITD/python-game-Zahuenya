@@ -61,6 +61,7 @@ class GameView(arcade.View):
             return
 
         self.camera = arcade.Camera(self.window.width, self.window.height)
+        self.camera_origin = arcade.Camera(self.window.width, self.window.height)
 
         self.tile_map = arcade.load_tilemap(map_name, TILE_SCALING)
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
@@ -111,6 +112,7 @@ class GameView(arcade.View):
         self.clear()
         self.camera.use()
         self.scene.draw()
+        self.camera_origin.use()
 
     def center_camera_on_sprite(self, camera, sprite, aux_y_shift, speed=0.2):
         x = max(0, camera.scale * (sprite.center_x - (camera.viewport_width / 2)))
@@ -126,12 +128,21 @@ class GameView(arcade.View):
 
         self.center_camera_on_sprite(self.camera, self.player, self.camera_y_shift)
 
+        if self.player.center_y < 0:
+            self.game_over()
+            return
+
+    def reset_camera(self):
+        self.camera.move_to((0, 0))
+
     def game_over(self):
         """Проигрышь"""
+        self.reset_camera()
         self.window.show_view(GameOverView())
 
     def win(self):
         """Игра пройдена"""
+        self.reset_camera()
         self.window.show_view(WinView())
 
     def next_level(self):
