@@ -6,7 +6,7 @@ import os
 GAME_NAME = "Suzy"
 GRAVITY = 1.0
 PLAYER_SPEED = 5.0
-PLAYER_JUMP_SPEED = 10.0
+PLAYER_JUMP_SPEED = 25.0
 
 GAME_WINDOW_HEIGHT = 800
 GAME_WINDOW_WIDTH = 1024
@@ -45,9 +45,11 @@ class GameView(arcade.View):
         self.tile_map = None
         self.scene = None
         self.level = LEVEL_START
-
+        self.camera = None
         self.player = None
         self.physics_engine = None
+        self.next_level_x_position = 0
+        self.camera_y_shift = 0
 
     def setup(self):
         """Инициализировать уровень игры"""
@@ -57,6 +59,8 @@ class GameView(arcade.View):
         if not os.path.exists(map_name):
             self.win()
             return
+
+        self.camera = arcade.Camera(self.window.width, self.window.height)
 
         self.tile_map = arcade.load_tilemap(map_name, TILE_SCALING)
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
@@ -86,7 +90,7 @@ class GameView(arcade.View):
         elif key == arcade.key.UP:
             self.player.change_y = PLAYER_JUMP_SPEED
         elif key == arcade.key.DOWN:
-            self.player.change_y = -PLAYER_JUMP_SPEED
+            self.camera_y_shift = 150
 
     def on_key_release(self, key: int, modifiers: int):
         # проверка
@@ -97,6 +101,7 @@ class GameView(arcade.View):
             self.player.change_x = 0
         elif key == arcade.key.UP or key == arcade.key.DOWN:
             self.player.change_y = 0
+            self.camera_y_shift = 0
 
     def on_show_view(self):
         self.setup()
@@ -104,7 +109,13 @@ class GameView(arcade.View):
     def on_draw(self):
         """Нарисовать кадр"""
         self.clear()
+        self.camera.use()
         self.scene.draw()
+
+    def center_camera_on_sprite(self, camera, sprite, aux_y_shift, speed=0.2):
+        x = max(0, camera.scale * (sprite.center_x - (camera.viewport_width / 2)))
+        y = max(0, camera.scale * (sprite.center_y - (camera.viewport_height / 2) - aux_y_shift))
+        camera.move_to((x, y), speed)
 
     def on_update(self, delta_time: float):
         """Обновить измерения координат и пр."""
@@ -112,6 +123,8 @@ class GameView(arcade.View):
 
         if self.player.center_x >= self.next_level_x_position:
             self.next_level()
+
+        self.center_camera_on_sprite(self.camera, self.player, self.camera_y_shift)
 
     def game_over(self):
         """Проигрышь"""
