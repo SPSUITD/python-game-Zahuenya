@@ -25,10 +25,19 @@ LAYER_NAME_FOREGROUND = "foreground"
 
 
 RESOURCES_DIR = os.path.dirname(os.path.abspath(__file__))
+RESOURCES_DIR = os.path.join(RESOURCES_DIR, "res")
 
 
 def get_resource_file_name(file_name):
     return f"{RESOURCES_DIR}/{file_name}"
+
+
+def get_resource_sprite_file_name(file_name):
+    return get_resource_file_name(os.path.join("sprites", file_name))
+
+
+def get_resource_map_file_name(file_name):
+    return get_resource_file_name(os.path.join("maps", file_name))
 
 
 MOVE_SIDE_LEFT = 0
@@ -53,7 +62,7 @@ class Agent(arcade.Sprite):
         self.texture = self.tex_idle[self.move_side]
 
     def load_texture(self, flip_horizontally=False):
-        file_name = get_resource_file_name(f"{self.base_name}.png")
+        file_name = get_resource_sprite_file_name(f"{self.base_name}.png")
         return arcade.load_texture(file_name, flipped_horizontally=flip_horizontally)
 
     def load_texture_pair(self):
@@ -83,16 +92,16 @@ class GameView(arcade.View):
     def setup(self):
         """Инициализировать уровень игры"""
 
-        map_name = get_resource_file_name(f"level_{self.level}.map.tmx")
+        level_map_file_name = get_resource_map_file_name(f"level_{self.level}.map.tmx")
 
-        if not os.path.exists(map_name):
+        if not os.path.exists(level_map_file_name):
             self.win()
             return
 
         self.camera = arcade.Camera(self.window.width, self.window.height)
         self.camera_origin = arcade.Camera(self.window.width, self.window.height)
 
-        self.tile_map = arcade.load_tilemap(map_name, TILE_SCALING)
+        self.tile_map = arcade.load_tilemap(level_map_file_name, TILE_SCALING)
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
 
         self.next_level_x_position = (self.tile_map.width * self.tile_map.tile_width) * TILE_SCALING
