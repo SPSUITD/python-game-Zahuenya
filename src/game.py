@@ -8,6 +8,7 @@ PLAYER_NAME = "girl"
 GRAVITY = 1.0
 PLAYER_SPEED = 5.0
 PLAYER_JUMP_SPEED = 25.0
+INITAL_LIVES = 3
 
 GAME_WINDOW_HEIGHT = 800
 GAME_WINDOW_WIDTH = 1024
@@ -26,6 +27,8 @@ LAYER_NAME_FOREGROUND = "foreground"
 
 RESOURCES_DIR = os.path.dirname(os.path.abspath(__file__))
 RESOURCES_DIR = os.path.join(RESOURCES_DIR, "res")
+
+INFO_STRING_GAP = 10
 
 
 def get_resource_file_name(file_name):
@@ -88,6 +91,8 @@ class GameView(arcade.View):
         self.physics_engine = None
         self.next_level_x_position = 0
         self.camera_y_shift = 0
+        self.score = 0
+        self.lives = INITAL_LIVES
 
     def setup(self):
         """Инициализировать уровень игры"""
@@ -122,6 +127,7 @@ class GameView(arcade.View):
             ladders=self.scene[LAYER_NAME_LADDERS],
             walls=self.scene[LAYER_NAME_WALLS]
         )
+        self.score = 0
 
     def on_key_press(self, key: int, modifiers: int):
         if key == arcade.key.LEFT:
@@ -148,7 +154,32 @@ class GameView(arcade.View):
         self.clear()
         self.camera.use()
         self.scene.draw()
+
+        self.draw_info()
+
+    def draw_info_string(self, x, y, text, anchor_x):
         self.camera_origin.use()
+        arcade.draw_text(
+            text, x, y,
+            arcade.csscolor.GREEN, 18,
+            anchor_x=anchor_x
+        )
+
+    def draw_info(self):
+        self.camera_origin.use()
+        y = self.window.height - INFO_STRING_GAP * 2
+        self.draw_info_string(
+            INFO_STRING_GAP, y,
+            f"Score: {self.score}",
+            "left")
+        self.draw_info_string(
+            self.window.width - INFO_STRING_GAP, y,
+            f"Lives: {self.lives}",
+            "right")
+        self.draw_info_string(
+            self.window.width / 2, y,
+            f"LEVEL: {self.level}",
+            "center")
 
     def center_camera_on_sprite(self, camera, sprite, aux_y_shift, speed=0.2):
         x = max(0, camera.scale * (sprite.center_x - (camera.viewport_width / 2)))
@@ -190,10 +221,15 @@ class GameView(arcade.View):
             if layer_coins in collision.sprite_lists:
                 # сбор монет
                 collision.remove_from_sprite_lists()
+                self.score += 10
 
     def game_over(self):
         """Проигрышь"""
-        self.window.show_view(GameOverView())
+        if self.lives > 1:
+            self.lives -= 1
+            self.setup()
+        else:
+            self.window.show_view(GameOverView())
 
     def win(self):
         """Игра пройдена"""
