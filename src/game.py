@@ -4,6 +4,7 @@ import os
 # Параметры
 
 GAME_NAME = "Suzy"
+PLAYER_NAME = "girl"
 GRAVITY = 1.0
 PLAYER_SPEED = 5.0
 PLAYER_JUMP_SPEED = 25.0
@@ -14,9 +15,6 @@ GAME_WINDOW_WIDTH = 1024
 LEVEL_START = 1
 TILE_SCALING = 0.5
 
-
-RESOURCES_DIR = os.path.dirname(os.path.abspath(__file__))
-
 LAYER_NAME_PLAYER = "player"
 LAYER_NAME_WALLS = "walls"
 LAYER_NAME_PLATFORMS = "platforms"
@@ -24,6 +22,9 @@ LAYER_NAME_LADDERS = "ladders"
 LAYER_NAME_COINS = "coins"
 LAYER_NAME_BACKGROUND = "background"
 LAYER_NAME_FOREGROUND = "foreground"
+
+
+RESOURCES_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def get_resource_file_name(file_name):
@@ -34,7 +35,7 @@ MOVE_SIDE_LEFT = 0
 MOVE_SIDE_RIGHT = 1
 
 
-class Player(arcade.Sprite):
+class Agent(arcade.Sprite):
     def __init__(self, base_name):
         super().__init__()
         self.base_name = base_name
@@ -57,6 +58,11 @@ class Player(arcade.Sprite):
 
     def load_texture_pair(self):
         return [self.load_texture(), self.load_texture(True)]
+
+
+class Player(Agent):
+    def __init__(self, base_name):
+        super().__init__(base_name)
 
 
 class GameView(arcade.View):
@@ -96,7 +102,7 @@ class GameView(arcade.View):
         else:
             arcade.set_background_color(arcade.color.BLACK)
 
-        self.player = Player("girl")
+        self.player = Player(PLAYER_NAME)
         self.player.position = [100, 190]
         self.scene.add_sprite(LAYER_NAME_PLAYER, self.player)
 
@@ -159,6 +165,22 @@ class GameView(arcade.View):
         if self.player.center_y < 0:
             self.game_over()
             return
+
+        self.check_player_collisions()
+
+    def check_player_collisions(self):
+        layer_coins = self.scene[LAYER_NAME_COINS]
+        collidable_layers = [
+            layer_coins
+        ]
+        collision = arcade.check_for_collision_with_lists(
+            self.player, collidable_layers
+        )
+
+        for collision in collision:
+            if layer_coins in collision.sprite_lists:
+                # сбор монет
+                collision.remove_from_sprite_lists()
 
     def game_over(self):
         """Проигрышь"""
