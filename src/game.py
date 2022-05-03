@@ -10,6 +10,7 @@ GRAVITY = 1.0
 PLAYER_SPEED = 5.0
 PLAYER_JUMP_SPEED = 25.0
 INITAL_LIVES = 3
+SHOT_SPEED = 10.0
 
 GAME_WINDOW_HEIGHT = 800
 GAME_WINDOW_WIDTH = 1024
@@ -26,6 +27,7 @@ LAYER_NAME_COINS = "coins"
 LAYER_NAME_BACKGROUND = "background"
 LAYER_NAME_FOREGROUND = "foreground"
 LAYER_NAME_ENEMIES = "enemies"
+LAYER_NAME_SHOTS = "shots"
 
 
 RESOURCES_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -77,6 +79,17 @@ class Agent(arcade.Sprite):
             self.load_texture(self.invert_side),
             self.load_texture(not self.invert_side)
         ]
+
+    def shoot(self, list_to_add=None):
+        lazer_sprite_file_name = get_resource_sprite_file_name("lazer.png")
+        shot = arcade.Sprite(lazer_sprite_file_name)
+        direction = -1 if self.move_side == MOVE_SIDE_LEFT else 1
+        shot.change_x = SHOT_SPEED * direction
+
+        shot.center_x = self.center_x + direction * self.width
+        shot.center_y = self.center_y + 20
+
+        return shot
 
 
 class Player(Agent):
@@ -152,7 +165,14 @@ class GameView(arcade.View):
             ladders=self.scene[LAYER_NAME_LADDERS],
             walls=self.scene[LAYER_NAME_WALLS]
         )
+
         self.score = 0
+        self.scene.add_sprite_list(LAYER_NAME_SHOTS)
+
+        self.scene.move_sprite_list_before(LAYER_NAME_PLAYER, LAYER_NAME_FOREGROUND)
+
+    def make_agent_shoot(self, agent):
+        self.scene.add_sprite(LAYER_NAME_SHOTS, agent.shoot())
 
     def on_key_press(self, key: int, modifiers: int):
         if key == arcade.key.LEFT:
@@ -163,6 +183,8 @@ class GameView(arcade.View):
             self.player.change_y = PLAYER_JUMP_SPEED
         elif key == arcade.key.DOWN:
             self.camera_y_shift = 250
+        elif key == arcade.key.SPACE:
+            self.make_agent_shoot(self.player)
 
     def on_key_release(self, key: int, modifiers: int):
         if key == arcade.key.LEFT or key == arcade.key.RIGHT:
@@ -221,10 +243,13 @@ class GameView(arcade.View):
 
         self.center_camera_on_sprite(self.camera, self.player, self.camera_y_shift)
 
-        # Update Animations
         self.scene.update_animation(
             delta_time,
             [LAYER_NAME_PLAYER],
+        )
+
+        self.scene.update(
+            [LAYER_NAME_PLATFORMS, LAYER_NAME_ENEMIES, LAYER_NAME_SHOTS]
         )
 
         if self.player.center_y < 0:
