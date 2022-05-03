@@ -141,7 +141,7 @@ class GameView(arcade.View):
             xy = self.tile_map.get_cartesian(point.shape[0], point.shape[1])
             enemy = Enemy()
             enemy.center_x = math.floor(xy[0] * (self.tile_map.tile_width * TILE_SCALING_BASE))
-            enemy.center_y = math.floor(xy[1] * (self.tile_map.tile_height * TILE_SCALING_BASE))
+            enemy.center_y = math.floor((xy[1] + 2) * (self.tile_map.tile_height * TILE_SCALING_BASE))
             self.scene.add_sprite(LAYER_NAME_ENEMIES, enemy)
 
         # движок
@@ -235,14 +235,20 @@ class GameView(arcade.View):
 
     def check_player_collisions(self):
         layer_coins = self.scene[LAYER_NAME_COINS]
+        layer_enemies = self.scene[LAYER_NAME_ENEMIES]
+
         collidable_layers = [
-            layer_coins
+            layer_coins,
+            layer_enemies
         ]
         collision = arcade.check_for_collision_with_lists(
             self.player, collidable_layers
         )
 
         for collision in collision:
+            if layer_enemies in collision.sprite_lists:
+                self.game_over()
+                return
             if layer_coins in collision.sprite_lists:
                 # сбор монет
                 collision.remove_from_sprite_lists()
