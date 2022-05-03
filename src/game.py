@@ -1,10 +1,11 @@
 import arcade
 import os
+import math
 
 # Параметры
 
 GAME_NAME = "Suzy"
-PLAYER_NAME = "girl"
+PLAYER_NAME = "girl_left"
 GRAVITY = 1.0
 PLAYER_SPEED = 5.0
 PLAYER_JUMP_SPEED = 25.0
@@ -14,7 +15,8 @@ GAME_WINDOW_HEIGHT = 800
 GAME_WINDOW_WIDTH = 1024
 
 LEVEL_START = 1
-TILE_SCALING = 0.5
+
+TILE_SCALING_BASE = 0.5
 
 LAYER_NAME_PLAYER = "player"
 LAYER_NAME_WALLS = "walls"
@@ -23,6 +25,7 @@ LAYER_NAME_LADDERS = "ladders"
 LAYER_NAME_COINS = "coins"
 LAYER_NAME_BACKGROUND = "background"
 LAYER_NAME_FOREGROUND = "foreground"
+LAYER_NAME_ENEMIES = "enemies"
 
 
 RESOURCES_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -48,9 +51,10 @@ MOVE_SIDE_RIGHT = 1
 
 
 class Agent(arcade.Sprite):
-    def __init__(self, base_name):
+    def __init__(self, base_name, invert_side=False):
         super().__init__()
         self.base_name = base_name
+        self.invert_side = invert_side
         self.tex_idle = self.load_texture_pair()
         self.move_side = MOVE_SIDE_LEFT
         self.texture = self.tex_idle[self.move_side]
@@ -69,12 +73,20 @@ class Agent(arcade.Sprite):
         return arcade.load_texture(file_name, flipped_horizontally=flip_horizontally)
 
     def load_texture_pair(self):
-        return [self.load_texture(), self.load_texture(True)]
+        return [
+            self.load_texture(self.invert_side),
+            self.load_texture(not self.invert_side)
+        ]
 
 
 class Player(Agent):
-    def __init__(self, base_name):
-        super().__init__(base_name)
+    def __init__(self, base_name, invert_side=False):
+        super().__init__(base_name, invert_side)
+
+
+class Enemy(Agent):
+    def __init__(self):
+        super().__init__("girl", False)
 
 
 class GameView(arcade.View):
@@ -106,20 +118,33 @@ class GameView(arcade.View):
         self.camera = arcade.Camera(self.window.width, self.window.height)
         self.camera_origin = arcade.Camera(self.window.width, self.window.height)
 
-        self.tile_map = arcade.load_tilemap(level_map_file_name, TILE_SCALING)
+        self.tile_map = arcade.load_tilemap(level_map_file_name, TILE_SCALING_BASE)
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
 
-        self.next_level_x_position = (self.tile_map.width * self.tile_map.tile_width) * TILE_SCALING
+        self.next_level_x_position = (self.tile_map.width * self.tile_map.tile_width) * TILE_SCALING_BASE
 
         if self.tile_map.background_color:
             arcade.set_background_color(self.tile_map.background_color)
         else:
             arcade.set_background_color(arcade.color.BLACK)
 
-        self.player = Player(PLAYER_NAME)
-        self.player.position = [100, 190]
+        self.player = Player(PLAYER_NAME, True)
+        self.player.scale = 96.0 / self.player.width
+        for point in self.tile_map.object_lists[LAYER_NAME_PLAYER]:
+            self.player.position = point.shape
+            break
+
         self.scene.add_sprite(LAYER_NAME_PLAYER, self.player)
 
+        # враги
+        for point in self.tile_map.object_lists[LAYER_NAME_ENEMIES]:
+            xy = self.tile_map.get_cartesian(point.shape[0], point.shape[1])
+            enemy = Enemy()
+            enemy.center_x = math.floor(xy[0] * (self.tile_map.tile_width * TILE_SCALING_BASE))
+            enemy.center_y = math.floor(xy[1] * (self.tile_map.tile_height * TILE_SCALING_BASE))
+            self.scene.add_sprite(LAYER_NAME_ENEMIES, enemy)
+
+        # движок
         self.physics_engine = arcade.PhysicsEnginePlatformer(
             self.player,
             platforms=self.scene[LAYER_NAME_PLATFORMS],
