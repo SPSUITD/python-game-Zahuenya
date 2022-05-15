@@ -1,6 +1,7 @@
 import arcade
 import os
 import math
+import random
 
 # Параметры
 
@@ -114,7 +115,7 @@ class GameView(arcade.View):
         self.camera = None
         self.player = None
         self.physics_engine = None
-        self.next_level_x_position = 0
+        self.map_pixel_width = 0
         self.camera_y_shift = 0
         self.score = 0
         self.lives = INITAL_LIVES
@@ -134,7 +135,7 @@ class GameView(arcade.View):
         self.tile_map = arcade.load_tilemap(level_map_file_name, TILE_SCALING_BASE)
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
 
-        self.next_level_x_position = (self.tile_map.width * self.tile_map.tile_width) * TILE_SCALING_BASE
+        self.map_pixel_width = (self.tile_map.width * self.tile_map.tile_width) * TILE_SCALING_BASE
 
         if self.tile_map.background_color:
             arcade.set_background_color(self.tile_map.background_color)
@@ -237,7 +238,7 @@ class GameView(arcade.View):
         """Обновить измерения координат и пр."""
         self.physics_engine.update()
 
-        if self.player.center_x >= self.next_level_x_position:
+        if self.player.center_x >= self.map_pixel_width:
             self.next_level()
             return
 
@@ -257,6 +258,40 @@ class GameView(arcade.View):
             return
 
         self.check_player_collisions()
+        self.update_shots()
+
+        for enemy in self.scene[LAYER_NAME_ENEMIES]:
+            if random.random() < 0.01:
+                self.make_agent_shoot(enemy)
+
+    def update_shots(self):
+        for shot in self.scene[LAYER_NAME_SHOTS]:
+            # если вышел за экран
+            if (shot.right < 0) or (shot.left > self.map_pixel_width):
+                shot.remove_from_sprite_lists()
+                continue
+
+            # куда попали?
+            hits = arcade.check_for_collision_with_lists(
+                shot,
+                [
+                    self.scene[LAYER_NAME_PLAYER],
+                    self.scene[LAYER_NAME_ENEMIES],
+                    self.scene[LAYER_NAME_WALLS],
+                    self.scene[LAYER_NAME_PLATFORMS],
+                ],
+            )
+
+            if not hits:
+                continue
+
+            shot.remove_from_sprite_lists()
+
+            for target in hits:
+                if self.scene[LAYER_NAME_ENEMIES] in target.sprite_lists:
+                    target.remove_from_sprite_lists()
+                if self.scene[LAYER_NAME_PLAYER] in target.sprite_lists:
+                    self.game_over()
 
     def check_player_collisions(self):
         layer_coins = self.scene[LAYER_NAME_COINS]
