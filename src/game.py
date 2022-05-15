@@ -74,14 +74,14 @@ class Agent(arcade.Sprite):
         self.invert_side = invert_side
         self.move_side = MOVE_SIDE_LEFT
 
-        self.textures = {}
+        self.states_textures = {}
         for state in AGENT_STATES:
             texs = self.load_state_textures(state)
             if texs:
-                self.textures[state] = texs
+                self.states_textures[state] = texs
             else:
                 # по умолчанию если нет текстур для состояния - использовать idle
-                self.textures[state] = self.textures[AGENT_STATE_IDLE]
+                self.states_textures[state] = self.states_textures[AGENT_STATE_IDLE]
 
         self.state = None
         self.texture_index = 0
@@ -91,7 +91,7 @@ class Agent(arcade.Sprite):
         if self.state != state:
             self.state = state
             self.texture_index = 0
-            self.texture = self.textures[self.state][self.texture_index][self.move_side]
+            self.texture = self.states_textures[self.state][self.texture_index][self.move_side]
 
     def update_animation(self, delta_time: float = 1 / 60):
         # Figure out if we need to flip face left or right
@@ -109,7 +109,7 @@ class Agent(arcade.Sprite):
         elif self.change_y < 0:
             self.set_state(AGENT_STATE_FALL)
 
-        texs = self.textures[self.state]
+        texs = self.states_textures[self.state]
         count = len(texs)
         index = self.texture_index % count
         self.texture = texs[index][self.move_side]
@@ -284,7 +284,8 @@ class GameView(arcade.View):
             f"LEVEL: {self.level}",
             "center")
 
-    def center_camera_on_sprite(self, camera, sprite, aux_y_shift, speed=0.2):
+    def center_camera_on_sprite(self, camera, sprite, aux_y_shift, speed=0.1):
+        """Центривать камеру на спрайте"""
         x = max(0, camera.scale * (sprite.center_x - (camera.viewport_width / 2)))
         y = max(0, camera.scale * (sprite.center_y - (camera.viewport_height / 2) - aux_y_shift))
         camera.move_to((x, y), speed)
