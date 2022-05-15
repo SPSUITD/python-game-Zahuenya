@@ -52,34 +52,89 @@ def get_resource_map_file_name(file_name):
 MOVE_SIDE_LEFT = 0
 MOVE_SIDE_RIGHT = 1
 
+AGENT_STATE_IDLE = "idle"
+AGENT_STATE_WALK = "walk"
+AGENT_STATE_JUMP = "jump"
+AGENT_STATE_FALL = "fall"
+AGENT_STATE_CLIMB = "climb"
+
+AGENT_STATES = [
+    AGENT_STATE_IDLE,
+    AGENT_STATE_WALK,
+    AGENT_STATE_JUMP,
+    AGENT_STATE_FALL,
+    AGENT_STATE_CLIMB
+]
+
 
 class Agent(arcade.Sprite):
     def __init__(self, base_name, invert_side=False):
         super().__init__()
         self.base_name = base_name
         self.invert_side = invert_side
-        self.tex_idle = self.load_texture_pair()
         self.move_side = MOVE_SIDE_LEFT
-        self.texture = self.tex_idle[self.move_side]
+
+        self.textures = {}
+        for state in AGENT_STATES:
+            texs = self.load_state_textures(state)
+            if texs:
+                self.textures[state] = texs
+            else:
+                # по умолчанию если нет текстур для состояния - использовать idle
+                self.textures[state] = self.textures[AGENT_STATE_IDLE]
+
+        self.state = None
+        self.texture_index = 0
+        self.set_state(AGENT_STATE_IDLE)
+
+    def set_state(self, state):
+        if self.state != state:
+            self.state = state
+            self.texture_index = 0
+            self.texture = self.textures[self.state][self.texture_index][self.move_side]
 
     def update_animation(self, delta_time: float = 1 / 60):
         # Figure out if we need to flip face left or right
         if self.change_x < 0:
             self.move_side = MOVE_SIDE_LEFT
+            self.set_state(AGENT_STATE_WALK)
         elif self.change_x > 0:
             self.move_side = MOVE_SIDE_RIGHT
+            self.set_state(AGENT_STATE_WALK)
+        else:
+            self.set_state(AGENT_STATE_IDLE)
 
-        self.texture = self.tex_idle[self.move_side]
+        if self.change_y > 0:
+            self.set_state(AGENT_STATE_JUMP)
+        elif self.change_y < 0:
+            self.set_state(AGENT_STATE_FALL)
 
-    def load_texture(self, flip_horizontally=False):
-        file_name = get_resource_sprite_file_name(f"{self.base_name}.png")
+        texs = self.textures[self.state]
+        count = len(texs)
+        index = self.texture_index % count
+        self.texture = texs[index][self.move_side]
+
+    def load_texture(self, file_name, flip_horizontally=False):
         return arcade.load_texture(file_name, flipped_horizontally=flip_horizontally)
 
-    def load_texture_pair(self):
+    def load_texture_pair(self, state, index):
+        file_name = get_resource_sprite_file_name(f"{self.base_name}.{state}.{index}.png")
+        if not os.path.exists(file_name):
+            return []
         return [
-            self.load_texture(self.invert_side),
-            self.load_texture(not self.invert_side)
+            self.load_texture(file_name, self.invert_side),
+            self.load_texture(file_name, not self.invert_side)
         ]
+
+    def load_state_textures(self, state):
+        texs = []
+
+        for index in range(100):
+            tex = self.load_texture_pair(state, index)
+            if not tex:
+                break
+            texs.append(tex)
+        return texs
 
     def shoot(self, list_to_add=None):
         lazer_sprite_file_name = get_resource_sprite_file_name("lazer.png")
