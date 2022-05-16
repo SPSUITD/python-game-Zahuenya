@@ -58,13 +58,15 @@ AGENT_STATE_WALK = "walk"
 AGENT_STATE_JUMP = "jump"
 AGENT_STATE_FALL = "fall"
 AGENT_STATE_CLIMB = "climb"
+AGENT_STATE_SIT = "sit"
 
 AGENT_STATES = [
     AGENT_STATE_IDLE,
     AGENT_STATE_WALK,
     AGENT_STATE_JUMP,
     AGENT_STATE_FALL,
-    AGENT_STATE_CLIMB
+    AGENT_STATE_CLIMB,
+    AGENT_STATE_SIT
 ]
 
 
@@ -77,6 +79,8 @@ class Agent(arcade.Sprite):
 
         self.is_on_ladder = False
         self.is_collided_with_something = False
+        self.is_on_platform = False
+        self.is_sitting = False
 
         self.states_textures = {}
         for state in AGENT_STATES:
@@ -91,6 +95,8 @@ class Agent(arcade.Sprite):
         self.texture_index = 0
         self.set_state(AGENT_STATE_IDLE)
 
+        self.original_scale = -1
+
     def set_state(self, state):
         if self.state != state:
             self.state = state
@@ -99,6 +105,9 @@ class Agent(arcade.Sprite):
 
     def update_animation(self, delta_time: float = 1 / 60):
         # Figure out if we need to flip face left or right
+        if self.original_scale < 0:
+            self.original_scale = self.scale
+
         if self.change_x < 0:
             self.move_side = MOVE_SIDE_LEFT
             self.set_state(AGENT_STATE_WALK)
@@ -106,12 +115,23 @@ class Agent(arcade.Sprite):
             self.move_side = MOVE_SIDE_RIGHT
             self.set_state(AGENT_STATE_WALK)
         else:
-            self.set_state(AGENT_STATE_IDLE)
+            if self.is_sitting and self.is_on_platform:
+                self.scale *= 0.90
+                min_scale = self.original_scale * 0.3
+                if self.scale < min_scale:
+                    self.scale = min_scale
+            else:
+                self.set_state(AGENT_STATE_SIT)
 
-        if self.change_y > 0:
-            self.set_state(AGENT_STATE_JUMP)
-        elif self.change_y < 0:
-            self.set_state(AGENT_STATE_FALL)
+        if not self.is_on_platform:
+            if self.change_y > 0:
+                self.set_state(AGENT_STATE_JUMP)
+                self.scale *= 1.05
+                if self.scale > self.original_scale:
+                    self.scale = self.original_scale
+
+            elif self.change_y < 0:
+                self.set_state(AGENT_STATE_FALL)
 
         if self.is_on_ladder:
             self.set_state(AGENT_STATE_CLIMB)
@@ -150,7 +170,7 @@ class Agent(arcade.Sprite):
         direction = -1 if self.move_side == MOVE_SIDE_LEFT else 1
         shot.change_x = SHOT_SPEED * direction
 
-        shot.center_x = self.center_x + direction * self.width
+        shot.center_x = self.center_x + direction * (self.width + shot.width / 2)
         shot.center_y = self.center_y + 20
 
         return shot
@@ -249,9 +269,9 @@ class GameView(arcade.View):
         elif key == arcade.key.UP:
             if self.physics_engine.can_jump():
                 self.physics_engine.jump(PLAYER_JUMP_SPEED)
-                #self.player.change_y = PLAYER_JUMP_SPEED
         elif key == arcade.key.DOWN:
             self.camera_y_shift = 250
+            self.player.is_sitting = True
         elif key == arcade.key.SPACE:
             self.make_agent_shoot(self.player)
 
@@ -260,6 +280,7 @@ class GameView(arcade.View):
             self.player.change_x = 0
         elif key == arcade.key.UP or key == arcade.key.DOWN:
             self.player.change_y = 0
+            self.player.is_sitting = False
             self.camera_y_shift = 0
 
     def on_show_view(self):
@@ -338,15 +359,25 @@ class GameView(arcade.View):
             self.update_enemy_action(enemy)
 
     def update_enemy_action(self, enemy: Enemy):
-        if enemy.is_collided_with_something:
+        if enemy.is_collided_with_something or not enemy.is_on_platform:
             enemy.change_x = -enemy.change_x
             enemy.center_x += enemy.change_x * 10
-        elif random.random() < 0.01:
+        elif random.random() < 0.005:
             enemy.change_x = -enemy.change_x
 
         # стрельба
         if random.random() < ENEMY_SHOT_PROBABILITY:
             self.make_agent_shoot(enemy)
+
+    def is_agent_on_platform(self, agent, y_distance: float = 15) -> bool:
+        """Копия из метода физического движка"""
+        agent.center_y -= y_distance
+        hits = arcade.check_for_collision_with_lists(
+            agent,
+            [self.scene[LAYER_NAME_WALLS], self.scene[LAYER_NAME_PLATFORMS]])
+        agent.center_y += y_distance
+
+        return len(hits) > 0
 
     def update_agent_state(self, agent: Agent):
         hits = arcade.check_for_collision_with_lists(
@@ -360,6 +391,7 @@ class GameView(arcade.View):
 
         agent.is_on_ladder = False
         agent.is_collided_with_something = False
+        agent.is_on_platform = self.is_agent_on_platform(agent)
 
         for target in hits:
             if self.scene[LAYER_NAME_WALLS] in target.sprite_lists:
