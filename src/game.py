@@ -12,6 +12,7 @@ PLAYER_SPEED = 5.0
 PLAYER_JUMP_SPEED = 25.0
 INITAL_LIVES = 3
 SHOT_SPEED = 10.0
+ENEMY_SHOT_PROBABILITY = 0.01
 
 GAME_WINDOW_HEIGHT = 800
 GAME_WINDOW_WIDTH = 1024
@@ -74,6 +75,9 @@ class Agent(arcade.Sprite):
         self.invert_side = invert_side
         self.move_side = MOVE_SIDE_LEFT
 
+        self.is_on_ladder = False
+        self.is_collided_with_something = False
+
         self.states_textures = {}
         for state in AGENT_STATES:
             texs = self.load_state_textures(state)
@@ -109,10 +113,14 @@ class Agent(arcade.Sprite):
         elif self.change_y < 0:
             self.set_state(AGENT_STATE_FALL)
 
-        texs = self.states_textures[self.state]
-        count = len(texs)
+        if self.is_on_ladder:
+            self.set_state(AGENT_STATE_CLIMB)
+
+        ts = self.states_textures[self.state]
+        count = len(ts)
         index = self.texture_index % count
-        self.texture = texs[index][self.move_side]
+        self.texture = ts[index][self.move_side]
+        self.texture_index += 1
 
     def load_texture(self, file_name, flip_horizontally=False):
         return arcade.load_texture(file_name, flipped_horizontally=flip_horizontally)
@@ -168,6 +176,7 @@ class GameView(arcade.View):
         self.scene = None
         self.level = LEVEL_START
         self.camera = None
+        self.camera_origin = None
         self.player = None
         self.physics_engine = None
         self.map_pixel_width = 0
@@ -209,6 +218,7 @@ class GameView(arcade.View):
         for point in self.tile_map.object_lists[LAYER_NAME_ENEMIES]:
             xy = self.tile_map.get_cartesian(point.shape[0], point.shape[1])
             enemy = Enemy()
+            enemy.change_x = 1
             enemy.center_x = math.floor(xy[0] * (self.tile_map.tile_width * TILE_SCALING_BASE))
             enemy.center_y = math.floor((xy[1] + 2) * (self.tile_map.tile_height * TILE_SCALING_BASE))
             self.scene.add_sprite(LAYER_NAME_ENEMIES, enemy)
@@ -221,6 +231,7 @@ class GameView(arcade.View):
             ladders=self.scene[LAYER_NAME_LADDERS],
             walls=self.scene[LAYER_NAME_WALLS]
         )
+        self.physics_engine.enable_multi_jump(2)
 
         self.score = 0
         self.scene.add_sprite_list(LAYER_NAME_SHOTS)
@@ -236,7 +247,9 @@ class GameView(arcade.View):
         elif key == arcade.key.RIGHT:
             self.player.change_x = PLAYER_SPEED
         elif key == arcade.key.UP:
-            self.player.change_y = PLAYER_JUMP_SPEED
+            if self.physics_engine.can_jump():
+                self.physics_engine.jump(PLAYER_JUMP_SPEED)
+                #self.player.change_y = PLAYER_JUMP_SPEED
         elif key == arcade.key.DOWN:
             self.camera_y_shift = 250
         elif key == arcade.key.SPACE:
@@ -300,9 +313,14 @@ class GameView(arcade.View):
 
         self.center_camera_on_sprite(self.camera, self.player, self.camera_y_shift)
 
+        # agents
+        self.update_agent_state(self.player)
+        for enemy in self.scene[LAYER_NAME_ENEMIES]:
+            self.update_agent_state(enemy)
+
         self.scene.update_animation(
             delta_time,
-            [LAYER_NAME_PLAYER],
+            [LAYER_NAME_PLAYER, LAYER_NAME_ENEMIES],
         )
 
         self.scene.update(
@@ -317,8 +335,39 @@ class GameView(arcade.View):
         self.update_shots()
 
         for enemy in self.scene[LAYER_NAME_ENEMIES]:
-            if random.random() < 0.01:
-                self.make_agent_shoot(enemy)
+            self.update_enemy_action(enemy)
+
+    def update_enemy_action(self, enemy: Enemy):
+        if enemy.is_collided_with_something:
+            enemy.change_x = -enemy.change_x
+            enemy.center_x += enemy.change_x * 10
+        elif random.random() < 0.01:
+            enemy.change_x = -enemy.change_x
+
+        # стрельба
+        if random.random() < ENEMY_SHOT_PROBABILITY:
+            self.make_agent_shoot(enemy)
+
+    def update_agent_state(self, agent: Agent):
+        hits = arcade.check_for_collision_with_lists(
+            agent,
+            [
+                self.scene[LAYER_NAME_WALLS],
+                self.scene[LAYER_NAME_PLATFORMS],
+                self.scene[LAYER_NAME_LADDERS]
+            ],
+        )
+
+        agent.is_on_ladder = False
+        agent.is_collided_with_something = False
+
+        for target in hits:
+            if self.scene[LAYER_NAME_WALLS] in target.sprite_lists:
+                agent.is_collided_with_something = True
+            if self.scene[LAYER_NAME_PLATFORMS] in target.sprite_lists:
+                agent.is_collided_with_something = True
+            if self.scene[LAYER_NAME_LADDERS] in target.sprite_lists:
+                agent.is_on_ladder = True
 
     def update_shots(self):
         for shot in self.scene[LAYER_NAME_SHOTS]:
