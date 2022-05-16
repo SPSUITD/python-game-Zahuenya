@@ -341,7 +341,7 @@ class GameView(arcade.View):
 
         self.scene.update_animation(
             delta_time,
-            [LAYER_NAME_PLAYER, LAYER_NAME_ENEMIES],
+            [LAYER_NAME_COINS, LAYER_NAME_PLAYER, LAYER_NAME_ENEMIES],
         )
 
         self.scene.update(
@@ -364,6 +364,14 @@ class GameView(arcade.View):
             enemy.center_x += enemy.change_x * 10
         elif random.random() < 0.005:
             enemy.change_x = -enemy.change_x
+
+        if not enemy.is_on_platform:
+            enemy.change_y = -1
+        else:
+            if random.random() < 0.005:
+                enemy.change_y = 30
+            else:
+                enemy.change_y = 0
 
         # стрельба
         if random.random() < ENEMY_SHOT_PROBABILITY:
@@ -481,6 +489,13 @@ class RestartGameView(arcade.View):
     def on_show_view(self):
         arcade.set_background_color(self.bg_color)
 
+    def activate(self):
+        game_view = GameView()
+        self.window.show_view(game_view)
+
+    def on_key_press(self, symbol: int, modifiers: int):
+        self.activate()
+
     def on_draw(self):
         self.clear()
         arcade.draw_text(
@@ -501,8 +516,7 @@ class RestartGameView(arcade.View):
         )
 
     def on_mouse_press(self, _x, _y, _button, _modifiers):
-        game_view = GameView()
-        self.window.show_view(game_view)
+        self.activate()
 
 
 class GameOverView(RestartGameView):
