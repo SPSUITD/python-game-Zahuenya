@@ -138,7 +138,7 @@ class Agent(arcade.Sprite):
 
         ts = self.states_textures[self.state]
         count = len(ts)
-        index = self.texture_index % count
+        index = (self.texture_index // 5) % count
         self.texture = ts[index][self.move_side]
         self.texture_index += 1
 
@@ -172,6 +172,7 @@ class Agent(arcade.Sprite):
 
         shot.center_x = self.center_x + direction * (self.width + shot.width / 2)
         shot.center_y = self.center_y + 20
+        shot.who = self
 
         return shot
 
@@ -348,7 +349,7 @@ class GameView(arcade.View):
             [LAYER_NAME_PLATFORMS, LAYER_NAME_ENEMIES, LAYER_NAME_SHOTS]
         )
 
-        if self.player.center_y < 0:
+        if self.player.center_y < -1000:
             self.game_over()
             return
 
@@ -366,10 +367,10 @@ class GameView(arcade.View):
             enemy.change_x = -enemy.change_x
 
         if not enemy.is_on_platform:
-            enemy.change_y = -1
+            enemy.change_y = -5
         else:
             if random.random() < 0.005:
-                enemy.change_y = 30
+                enemy.change_y = 50
             else:
                 enemy.change_y = 0
 
@@ -434,7 +435,13 @@ class GameView(arcade.View):
 
             for target in hits:
                 if self.scene[LAYER_NAME_ENEMIES] in target.sprite_lists:
-                    target.remove_from_sprite_lists()
+                    if shot.who == self.player:
+                        # убит
+                        target.remove_from_sprite_lists()
+                    else:
+                        # респавн
+                        target.center_y = self.window.height * 2
+                        target.center_x += (random.random() * 2 - 1) * self.window.width * 0.5
                 if self.scene[LAYER_NAME_PLAYER] in target.sprite_lists:
                     self.game_over()
 
@@ -458,6 +465,8 @@ class GameView(arcade.View):
                 # сбор монет
                 collision.remove_from_sprite_lists()
                 self.score += 10
+                if (self.score % 100) == 0:
+                    self.lives += 1
 
     def game_over(self):
         """Проигрышь"""
