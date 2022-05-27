@@ -6,7 +6,7 @@ import random
 # Параметры
 
 GAME_NAME = "Suzy"
-PLAYER_NAME = "girl_left"
+PLAYER_NAME = "super_girl"
 GRAVITY = 1.0
 PLAYER_SPEED = 5.0
 PLAYER_JUMP_SPEED = 25.0
@@ -138,7 +138,7 @@ class Agent(arcade.Sprite):
 
         ts = self.states_textures[self.state]
         count = len(ts)
-        index = (self.texture_index // 5) % count
+        index = (self.texture_index // 20) % count
         self.texture = ts[index][self.move_side]
         self.texture_index += 1
 
@@ -184,7 +184,7 @@ class Player(Agent):
 
 class Enemy(Agent):
     def __init__(self):
-        super().__init__("girl", False)
+        super().__init__("enemy", False)
 
 
 class GameView(arcade.View):
@@ -204,6 +204,7 @@ class GameView(arcade.View):
         self.camera_y_shift = 0
         self.score = 0
         self.lives = INITAL_LIVES
+        self.bg = None
 
     def setup(self):
         """Инициализировать уровень игры"""
@@ -219,6 +220,10 @@ class GameView(arcade.View):
 
         self.tile_map = arcade.load_tilemap(level_map_file_name, TILE_SCALING_BASE)
         self.scene = arcade.Scene.from_tilemap(self.tile_map)
+
+        self.bg = arcade.Sprite(get_resource_sprite_file_name("bg.png"))
+        self.bg.position = [self.window.width / 2, self.window.height / 2 + 10]
+        self.bg.scale = 1.3
 
         self.map_pixel_width = (self.tile_map.width * self.tile_map.tile_width) * TILE_SCALING_BASE
 
@@ -290,6 +295,7 @@ class GameView(arcade.View):
     def on_draw(self):
         """Нарисовать кадр"""
         self.clear()
+        self.bg.draw()
         self.camera.use()
         self.scene.draw()
 
