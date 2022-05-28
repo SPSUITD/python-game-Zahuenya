@@ -101,7 +101,7 @@ class Agent(arcade.Sprite):
         if self.state != state:
             self.state = state
             self.texture_index = 0
-            self.texture = self.states_textures[self.state][self.texture_index][self.move_side]
+            self.texture = self.states_textures[self.state][0][self.move_side]
 
     def update_animation(self, delta_time: float = 1 / 60):
         # Figure out if we need to flip face left or right
@@ -120,8 +120,7 @@ class Agent(arcade.Sprite):
                 min_scale = self.original_scale * 0.3
                 if self.scale < min_scale:
                     self.scale = min_scale
-            else:
-                self.set_state(AGENT_STATE_SIT)
+            self.set_state(AGENT_STATE_IDLE)
 
         if not self.is_on_platform:
             if self.change_y > 0:
@@ -164,7 +163,7 @@ class Agent(arcade.Sprite):
             texs.append(tex)
         return texs
 
-    def shoot(self, list_to_add=None):
+    def shoot(self):
         lazer_sprite_file_name = get_resource_sprite_file_name("lazer.png")
         shot = arcade.Sprite(lazer_sprite_file_name)
         direction = -1 if self.move_side == MOVE_SIDE_LEFT else 1
@@ -178,8 +177,8 @@ class Agent(arcade.Sprite):
 
 
 class Player(Agent):
-    def __init__(self, base_name, invert_side=False):
-        super().__init__(base_name, invert_side)
+    def __init__(self):
+        super().__init__(PLAYER_NAME, True)
 
 
 class Enemy(Agent):
@@ -227,12 +226,7 @@ class GameView(arcade.View):
 
         self.map_pixel_width = (self.tile_map.width * self.tile_map.tile_width) * TILE_SCALING_BASE
 
-        if self.tile_map.background_color:
-            arcade.set_background_color(self.tile_map.background_color)
-        else:
-            arcade.set_background_color(arcade.color.BLACK)
-
-        self.player = Player(PLAYER_NAME, True)
+        self.player = Player()
         self.player.scale = 96.0 / self.player.width
         for point in self.tile_map.object_lists[LAYER_NAME_PLAYER]:
             self.player.position = point.shape
@@ -302,7 +296,6 @@ class GameView(arcade.View):
         self.draw_info()
 
     def draw_info_string(self, x, y, text, anchor_x):
-        self.camera_origin.use()
         arcade.draw_text(
             text, x, y,
             arcade.csscolor.GREEN, 18,
@@ -459,11 +452,11 @@ class GameView(arcade.View):
             layer_coins,
             layer_enemies
         ]
-        collision = arcade.check_for_collision_with_lists(
+        collisions = arcade.check_for_collision_with_lists(
             self.player, collidable_layers
         )
 
-        for collision in collision:
+        for collision in collisions:
             if layer_enemies in collision.sprite_lists:
                 self.game_over()
                 return
